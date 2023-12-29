@@ -12,7 +12,6 @@ abandonship -s <secret-name> -m '<message>'
 
 * The runtime environment has default credentials set with `cloud-platform` scope
 * The secret content is a YAML document with `token` and `user` keys set
-* Latest version of the secret is fetched
 
 ## Why
 

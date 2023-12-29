@@ -14,17 +14,21 @@ import (
 )
 
 const (
-	name    = "abandonship"
-	version = "0.1.0"
+	appVersion     = "0.1.0"
+	name           = "abandonship"
+	scope          = "cloud-platform"
+	defaultVersion = "latest"
+	secretSpec     = "projects/%s/secrets/%s/versions/%s"
 )
 
 type args struct {
-	Message string `arg:"required,-m,--message" help:"Message body"`
-	Secret  string `arg:"required,-s,--secret" help:"Secret name"`
+	Message       string `arg:"required,-m,--message" help:"Message body"`
+	Secret        string `arg:"required,-s,--secret" help:"Secret name"`
+	SecretVersion string `arg:"-v,--secret-version" help:"Secret version"`
 }
 
 func (args) Version() string {
-	return fmt.Sprintf("%s v%s", name, version)
+	return fmt.Sprintf("%s v%s", name, appVersion)
 }
 
 type credentials struct {
@@ -32,8 +36,8 @@ type credentials struct {
 	User  string `yaml:"user"`
 }
 
-func readSecret(ctx context.Context, secret string) (out []byte, err error) {
-	creds, err := google.FindDefaultCredentials(ctx, "cloud-platform")
+func readSecret(ctx context.Context, secret, version string) (out []byte, err error) {
+	creds, err := google.FindDefaultCredentials(ctx, scope)
 	if err != nil {
 		return out, fmt.Errorf("unable to construct credentials: %v", err)
 	}
@@ -45,18 +49,21 @@ func readSecret(ctx context.Context, secret string) (out []byte, err error) {
 
 	client, err := secretmanager.NewClient(ctx)
 	if err != nil {
-		return []byte{}, fmt.Errorf("error creating secret manager client: %v", err)
+		return out, fmt.Errorf("error creating secret manager client: %v", err)
 	}
 	defer client.Close()
 
-	secretName := fmt.Sprintf("projects/%s/secrets/%s/versions/latest", project, secret)
+	if version == "" {
+		version = defaultVersion
+	}
+	secretName := fmt.Sprintf(secretSpec, project, secret, version)
 	accessRequest := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: secretName,
 	}
 
 	result, err := client.AccessSecretVersion(ctx, accessRequest)
 	if err != nil {
-		return []byte{}, fmt.Errorf("error accessing secret %s: %v", secretName, err)
+		return out, fmt.Errorf("error accessing secret %s: %v", secretName, err)
 	}
 
 	return result.Payload.Data, nil
@@ -66,7 +73,7 @@ func main() {
 	var parsed args
 	arg.MustParse(&parsed)
 
-	secret, err := readSecret(context.Background(), parsed.Secret)
+	secret, err := readSecret(context.Background(), parsed.Secret, parsed.SecretVersion)
 	if err != nil {
 		log.Fatal(err)
 	}
