@@ -5,7 +5,7 @@ Simple Go app for notifying via Pushover. Intended to be used in a shutdown scri
 ## Usage
 
 ```
-abandonship -s <secret-name> -m '<message>'
+abandonship -s <secret-name> -m '<message>' [-v <secret-version>]
 ```
 
 ## Assumptions
